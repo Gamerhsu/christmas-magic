@@ -501,8 +501,9 @@
             // Keep double click for desktop users
             window.addEventListener('dblclick', (event) => {
                 if (event.target.closest('#glass-panel')) return;
-                if (!isCameraActive && !CONFIG.autoRotate) {
-                    toggleExplosionUI(); // Use same logic function
+                // FIX: Allow interaction even when autoRotate is ON
+                if (!isCameraActive) {
+                    toggleExplosionUI();
                 }
             });
         }
@@ -708,16 +709,20 @@
 
         function updateInteraction() {
             let targetExp = 0;
-            if (CONFIG.autoRotate) {
-                particleSystem.rotation.y += 0.005;
+            
+            if (isCameraActive) {
+                targetExp = handExpansion;
+                if (handRotationTarget < 0.4) particleSystem.rotation.y -= 0.02;
+                if (handRotationTarget > 0.6) particleSystem.rotation.y += 0.02;
+                isMouseExploded = false;
             } else {
-                if (isCameraActive) {
-                    targetExp = handExpansion;
-                    if (handRotationTarget < 0.4) particleSystem.rotation.y -= 0.02;
-                    if (handRotationTarget > 0.6) particleSystem.rotation.y += 0.02;
-                    isMouseExploded = false;
-                } else {
-                    targetExp = isMouseExploded ? 1.0 : 0.0;
+                // FIX: Mouse/Button explosion overrides everything
+                targetExp = isMouseExploded ? 1.0 : 0.0;
+                
+                // Rotation continues unless manually exploding? 
+                // Or rotation continues ALWAYS if autoRotate is on.
+                if (CONFIG.autoRotate) {
+                    particleSystem.rotation.y += 0.005;
                 }
             }
             
