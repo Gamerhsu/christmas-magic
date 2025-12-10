@@ -1,0 +1,837 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+    <title>Interactive Christmas Particles</title>
+    <style>
+        /* 1. 全局設定 */
+        html, body {
+            margin: 0;
+            padding: 0;
+            width: 100%;
+            height: 100%;
+            overflow: hidden;
+            background-color: #02040a;
+            font-family: "SF Pro Display", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+            cursor: default;
+        }
+
+        body {
+            /* 模擬聖誕夜的深邃背景：午夜藍底色 + 遠處的溫暖燈光光暈 */
+            background: 
+                radial-gradient(circle at 15% 50%, rgba(220, 20, 60, 0.15), transparent 25%), /* 左側紅光 */
+                radial-gradient(circle at 85% 30%, rgba(255, 215, 0, 0.1), transparent 25%), /* 右側金光 */
+                radial-gradient(circle at 50% 50%, rgba(10, 20, 40, 0.4), #000000 90%), /* 中央暗角 */
+                linear-gradient(to bottom, #0f172a, #000000); /* 整體深藍漸層 */
+        }
+
+        body:active { cursor: grabbing; }
+
+        #canvas-container { 
+            width: 100%; height: 100%; 
+            position: absolute; top: 0; left: 0; 
+            z-index: 1;
+        }
+        
+        /* 2. Apple VisionOS 風格 UI (極致磨砂質感) */
+        #glass-panel {
+            position: absolute;
+            top: 20px;
+            right: 20px;
+            width: 280px;
+            padding: 24px;
+            z-index: 10;
+            
+            /* 核心玻璃效果 */
+            background: rgba(40, 40, 40, 0.3);
+            backdrop-filter: blur(25px) saturate(180%);
+            -webkit-backdrop-filter: blur(25px) saturate(180%);
+            
+            /* 邊框光暈 */
+            border: 1px solid rgba(255, 255, 255, 0.15);
+            border-radius: 32px;
+            
+            /* 柔和陰影 */
+            box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.3);
+            
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+            transition: opacity 0.3s;
+        }
+
+        .panel-title {
+            color: rgba(255, 255, 255, 0.6);
+            font-size: 11px;
+            font-weight: 700;
+            letter-spacing: 2px;
+            text-transform: uppercase;
+            margin-bottom: 8px;
+        }
+
+        /* 3. 液態氣泡按鈕 */
+        .glass-btn-group {
+            display: flex;
+            gap: 12px;
+            flex-wrap: wrap;
+        }
+
+        .glass-btn {
+            flex: 1;
+            min-width: 60px;
+            height: 48px;
+            border: none;
+            outline: none;
+            cursor: pointer;
+            position: relative;
+            border-radius: 16px;
+            
+            /* 氣泡材質 */
+            background: linear-gradient(145deg, rgba(255,255,255,0.1), rgba(255,255,255,0.02));
+            box-shadow: 
+                inset 1px 1px 0px rgba(255, 255, 255, 0.2), 
+                inset -1px -1px 0px rgba(0, 0, 0, 0.1), 
+                0 4px 10px rgba(0,0,0,0.3);
+                
+            color: rgba(255, 255, 255, 0.9);
+            font-size: 13px;
+            font-weight: 500;
+            transition: all 0.2s cubic-bezier(0.25, 0.8, 0.25, 1);
+            
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 6px;
+        }
+
+        .glass-btn:hover {
+            transform: translateY(-2px);
+            background: linear-gradient(145deg, rgba(255,255,255,0.15), rgba(255,255,255,0.05));
+            box-shadow: 
+                inset 1px 1px 0px rgba(255, 255, 255, 0.4),
+                0 8px 20px rgba(0,0,0,0.4);
+        }
+
+        .glass-btn:active {
+            transform: translateY(1px);
+            box-shadow: 
+                inset 2px 2px 5px rgba(0,0,0,0.2), 
+                inset -1px -1px 0px rgba(255,255,255,0.1);
+        }
+
+        .glass-btn.active {
+            background: rgba(255, 255, 255, 0.15);
+            border: 1px solid rgba(255, 255, 255, 0.4);
+            box-shadow: 0 0 20px rgba(255, 255, 255, 0.15);
+            color: #fff;
+            text-shadow: 0 0 8px rgba(255,255,255,0.6);
+        }
+
+        /* 4. 液態滑桿 */
+        .slider-container {
+            width: 100%;
+        }
+        
+        .slider-label {
+            display: flex;
+            justify-content: space-between;
+            color: rgba(255,255,255,0.5);
+            font-size: 11px;
+            font-weight: 600;
+            margin-bottom: 10px;
+        }
+
+        input[type=range] {
+            -webkit-appearance: none;
+            width: 100%;
+            background: transparent;
+        }
+
+        input[type=range]::-webkit-slider-runnable-track {
+            width: 100%;
+            height: 6px;
+            cursor: pointer;
+            background: rgba(0, 0, 0, 0.4);
+            border-radius: 10px;
+            box-shadow: inset 0 1px 3px rgba(0,0,0,0.5);
+            border-bottom: 1px solid rgba(255,255,255,0.05);
+        }
+
+        input[type=range]::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            height: 22px;
+            width: 22px;
+            border-radius: 50%;
+            background: #e0e0e0;
+            cursor: pointer;
+            margin-top: -8px;
+            box-shadow: 
+                0 4px 10px rgba(0,0,0,0.5),
+                inset 0 2px 5px rgba(255,255,255,1);
+            background: radial-gradient(circle at 30% 30%, #ffffff, #888888);
+            transition: transform 0.1s;
+        }
+        
+        input[type=range]::-webkit-slider-thumb:hover {
+            transform: scale(1.1);
+        }
+
+        /* 5. 其他 UI */
+        #greeting-overlay {
+            position: absolute;
+            top: 50%; left: 50%;
+            transform: translate(-50%, -50%);
+            text-align: center;
+            pointer-events: none;
+            z-index: 5;
+            width: 100%;
+        }
+        
+        #greeting-text {
+            font-family: 'Georgia', serif;
+            font-size: 5rem;
+            font-weight: 700;
+            color: #fff;
+            text-shadow: 0 0 30px rgba(255, 215, 0, 0.5), 0 0 60px rgba(0, 0, 0, 0.8);
+            opacity: 0;
+            transition: opacity 0.8s, transform 0.8s;
+            transform: scale(0.9) translateY(20px);
+        }
+
+        #click-hint {
+            position: absolute;
+            bottom: 40px;
+            left: 50%;
+            transform: translateX(-50%);
+            text-align: center;
+            color: rgba(255,255,255,0.6);
+            font-size: 13px;
+            font-weight: 500;
+            letter-spacing: 1px;
+            pointer-events: none;
+            z-index: 5;
+            animation: float 3s ease-in-out infinite;
+        }
+
+        @keyframes float { 
+            0%, 100% { transform: translateX(-50%) translateY(0); opacity: 0.6; } 
+            50% { transform: translateX(-50%) translateY(-5px); opacity: 0.9; } 
+        }
+
+        #camera-wrapper {
+            position: absolute;
+            bottom: 20px;
+            left: 20px;
+            width: 160px;
+            height: 120px;
+            z-index: 10;
+            border-radius: 20px;
+            overflow: hidden;
+            display: none;
+            border: 1px solid rgba(255,255,255,0.3);
+            box-shadow: 0 10px 30px rgba(0,0,0,0.5);
+            background: #000;
+        }
+        
+        #camera-preview {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            transform: scaleX(-1);
+            opacity: 0.8;
+        }
+
+        #loading {
+            position: absolute;
+            top: 50%; left: 50%;
+            transform: translate(-50%, -50%);
+            color: white;
+            font-family: -apple-system, sans-serif;
+            z-index: 20;
+            background: rgba(20, 20, 20, 0.6);
+            backdrop-filter: blur(20px);
+            padding: 30px 50px;
+            border-radius: 20px;
+            border: 1px solid rgba(255,255,255,0.1);
+            text-align: center;
+            box-shadow: 0 20px 50px rgba(0,0,0,0.5);
+        }
+    </style>
+    
+    <script type="importmap">
+        {
+            "imports": {
+                "three": "https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js",
+                "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/"
+            }
+        }
+    </script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/gsap.min.js"></script>
+</head>
+<body>
+
+    <div id="loading">Creating Magic...</div>
+    <div id="canvas-container"></div>
+    
+    <!-- Liquid Glass UI Panel -->
+    <div id="glass-panel">
+        <div>
+            <div class="panel-title">SHAPE</div>
+            <div class="glass-btn-group">
+                <button class="glass-btn active" onclick="setShape('Tree', this)">🌲</button>
+                <button class="glass-btn" onclick="setShape('CandyCane', this)">🍬</button>
+                <button class="glass-btn" onclick="setShape('Snowflake', this)">❄️</button>
+                <button class="glass-btn" onclick="setShape('GiftBox', this)">🎁</button>
+            </div>
+        </div>
+
+        <div>
+            <div class="panel-title">INTERACTION</div>
+            <div class="glass-btn-group">
+                <button id="btn-camera" class="glass-btn" onclick="toggleCameraUI()">
+                    <span>📷 Camera</span>
+                </button>
+                <button id="btn-rotate" class="glass-btn" onclick="toggleAutoRotateUI()">
+                    <span>🔄 Rotate</span>
+                </button>
+            </div>
+        </div>
+
+        <div class="slider-container">
+            <div class="slider-label">
+                <span>BLOOM INTENSITY</span>
+                <span id="bloom-val">1.2</span>
+            </div>
+            <input type="range" min="0" max="3" step="0.1" value="1.2" oninput="updateBloom(this.value)">
+        </div>
+    </div>
+
+    <div id="greeting-overlay">
+        <div id="greeting-text">Merry Christmas</div>
+    </div>
+
+    <div id="click-hint">Double Click to Open Gift / Drag to Rotate</div>
+
+    <div id="camera-wrapper">
+        <video id="camera-preview" playsinline></video>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/@mediapipe/camera_utils/camera_utils.js" crossorigin="anonymous"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@mediapipe/control_utils/control_utils.js" crossorigin="anonymous"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@mediapipe/hands/hands.js" crossorigin="anonymous"></script>
+
+    <script type="module">
+        import * as THREE from 'three';
+        import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
+        import { EffectComposer } from 'three/addons/postprocessing/EffectComposer.js';
+        import { RenderPass } from 'three/addons/postprocessing/RenderPass.js';
+        import { UnrealBloomPass } from 'three/addons/postprocessing/UnrealBloomPass.js';
+
+        // --- Configuration ---
+        const CONFIG = {
+            particleCount: 30000, 
+            shape: 'Tree', 
+            autoRotate: false,
+            bloomStrength: 1.2, 
+            bloomRadius: 0.5,
+            bloomThreshold: 0.1
+        };
+
+        const WISHES = [
+            "Merry Christmas!", "Joy to the World", "Let it Snow", 
+            "Season's Greetings", "Happy Holidays", "Peace on Earth",
+            "Jingle Bells", "Ho Ho Ho!", "Warm Wishes",
+            "Magic is Everywhere", "Shine Bright", "Winter Wonderland",
+            "Love & Joy", "Believe in Magic", "Happy New Year"
+        ];
+
+        // --- Globals ---
+        let scene, camera, renderer, composer, controls;
+        let particleSystem, geometry, material;
+        let hands, cameraUtils;
+        let isCameraActive = false;
+        let handExpansion = 0;
+        let handRotationTarget = 0.5; 
+        let isMouseExploded = false;
+        let currentWishIndex = 0;
+        let isTextVisible = false;
+
+        // UI Helpers
+        window.setShape = (shape, btn) => {
+            CONFIG.shape = shape;
+            changeShape(shape);
+            document.querySelectorAll('.glass-btn-group:first-of-type .glass-btn').forEach(b => b.classList.remove('active'));
+            btn.classList.add('active');
+        };
+
+        window.toggleCameraUI = () => {
+            toggleCamera();
+            const btn = document.getElementById('btn-camera');
+            if(isCameraActive) btn.classList.add('active');
+            else btn.classList.remove('active');
+        };
+
+        window.toggleAutoRotateUI = () => {
+            CONFIG.autoRotate = !CONFIG.autoRotate;
+            const btn = document.getElementById('btn-rotate');
+            if(CONFIG.autoRotate) btn.classList.add('active');
+            else btn.classList.remove('active');
+        };
+
+        window.updateBloom = (val) => {
+            document.getElementById('bloom-val').innerText = val;
+            if(composer) composer.passes[1].strength = parseFloat(val);
+        };
+
+        // --- Shaders ---
+        const vertexShader = `
+            uniform float uTime;
+            uniform float uExpansion;
+            uniform float uShapeMix;
+            uniform float uPixelRatio;
+
+            attribute vec3 posTree;
+            attribute vec3 posCandyCane;
+            attribute vec3 posSnowflake;
+            attribute vec3 posGiftBox;
+            attribute vec3 colorTree;
+            attribute vec3 colorCandyCane;
+            attribute vec3 colorSnowflake;
+            attribute vec3 colorGiftBox;
+            attribute vec3 randomDir;
+            attribute float size;
+
+            varying vec3 vColor;
+
+            vec3 getMixedPos(float t) {
+                float safeT = clamp(t, 0.0, 3.0);
+                if (safeT < 1.0) return mix(posTree, posCandyCane, safeT);
+                if (safeT < 2.0) return mix(posCandyCane, posSnowflake, safeT - 1.0);
+                return mix(posSnowflake, posGiftBox, safeT - 2.0);
+            }
+
+            vec3 getMixedColor(float t) {
+                float safeT = clamp(t, 0.0, 3.0);
+                if (safeT < 1.0) return mix(colorTree, colorCandyCane, safeT);
+                if (safeT < 2.0) return mix(colorCandyCane, colorSnowflake, safeT - 1.0);
+                return mix(colorSnowflake, colorGiftBox, safeT - 2.0);
+            }
+
+            void main() {
+                vec3 targetPos = getMixedPos(uShapeMix);
+                vec3 finalColor = getMixedColor(uShapeMix);
+                vec3 explodedPos = targetPos + (randomDir * uExpansion * 20.0);
+                
+                if (uExpansion > 0.05) {
+                    explodedPos.x += sin(uTime * 2.0 + targetPos.y) * uExpansion * 2.0;
+                    explodedPos.y += cos(uTime * 1.5 + targetPos.x) * uExpansion * 2.0;
+                }
+
+                vec4 mvPosition = modelViewMatrix * vec4(explodedPos, 1.0);
+                gl_Position = projectionMatrix * mvPosition;
+                float perspectiveSize = (40.0 / -mvPosition.z);
+                gl_PointSize = size * uPixelRatio * clamp(perspectiveSize, 2.0, 100.0);
+                vColor = finalColor;
+            }
+        `;
+
+        const fragmentShader = `
+            varying vec3 vColor;
+            void main() {
+                vec2 uv = gl_PointCoord - 0.5;
+                float dist = length(uv);
+                if (dist > 0.5) discard;
+                float alpha = 1.0 - smoothstep(0.3, 0.5, dist);
+                gl_FragColor = vec4(vColor, alpha);
+            }
+        `;
+
+        function init() {
+            const container = document.getElementById('canvas-container');
+            
+            scene = new THREE.Scene();
+            // 設置霧氣以融合深色背景
+            scene.fog = new THREE.FogExp2(0x0a0c14, 0.02);
+
+            camera = new THREE.PerspectiveCamera(60, window.innerWidth / window.innerHeight, 0.1, 1000);
+            camera.position.set(0, 0, 40);
+
+            // Renderer
+            renderer = new THREE.WebGLRenderer({ 
+                antialias: false, 
+                powerPreference: "high-performance",
+                alpha: true // 確保背景透明
+            });
+            renderer.setSize(window.innerWidth, window.innerHeight);
+            renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+            renderer.setClearColor(0x000000, 0); // 清除顏色設為透明
+            container.appendChild(renderer.domElement);
+
+            // Post Processing
+            const renderScene = new RenderPass(scene, camera);
+            
+            // Bloom
+            const bloomPass = new UnrealBloomPass(new THREE.Vector2(window.innerWidth, window.innerHeight), 1.5, 0.4, 0.85);
+            bloomPass.threshold = CONFIG.bloomThreshold;
+            bloomPass.strength = CONFIG.bloomStrength;
+            bloomPass.radius = CONFIG.bloomRadius;
+
+            composer = new EffectComposer(renderer);
+            composer.addPass(renderScene);
+            composer.addPass(bloomPass);
+
+            controls = new OrbitControls(camera, renderer.domElement);
+            controls.enableDamping = true;
+            controls.dampingFactor = 0.05;
+            controls.enablePan = false; 
+
+            generateParticles();
+            setupMediaPipe();
+            setupEvents();
+
+            window.addEventListener('resize', onWindowResize);
+            
+            document.getElementById('loading').style.display = 'none';
+            animate();
+        }
+
+        function setupEvents() {
+            window.addEventListener('dblclick', (event) => {
+                if (event.target.closest('#glass-panel')) return;
+                if (!isCameraActive && !CONFIG.autoRotate) {
+                    isMouseExploded = !isMouseExploded;
+                    const hint = document.getElementById('click-hint');
+                    if (isMouseExploded) {
+                        hint.style.opacity = 0.5;
+                        hint.innerText = "Double Click to Close";
+                    } else {
+                        hint.style.opacity = 1;
+                        hint.innerText = "Double Click to Open Gift / Drag to Rotate";
+                    }
+                }
+            });
+        }
+
+        function generateParticles() {
+            if (particleSystem) {
+                scene.remove(particleSystem);
+                geometry.dispose();
+                material.dispose();
+            }
+
+            const count = CONFIG.particleCount;
+            geometry = new THREE.BufferGeometry();
+
+            const posTree = []; const posCandyCane = []; const posSnowflake = []; const posGiftBox = [];
+            const colorTree = []; const colorCandyCane = []; const colorSnowflake = []; const colorGiftBox = [];
+            const randomDir = []; const sizes = [];
+
+            const colorGreen = new THREE.Color(0x0f5e28);
+            const colorGold = new THREE.Color(0xffd700);
+            const colorRed = new THREE.Color(0xdc143c);
+            const colorWhite = new THREE.Color(0xffffff);
+            const colorBlue = new THREE.Color(0x87cefa); 
+            const colorBoxRed = new THREE.Color(0xdc143c); 
+
+            for (let i = 0; i < count; i++) {
+                // 1. Tree
+                let tx, ty, tz;
+                let tColor = new THREE.Color();
+                if (i < count * 0.02) { 
+                    const r = Math.random() * 2.5;
+                    const theta = Math.random() * Math.PI * 2;
+                    const phi = Math.acos((Math.random() * 2) - 1);
+                    tx = r * Math.sin(phi) * Math.cos(theta);
+                    ty = 16 + r * Math.sin(phi) * Math.sin(theta);
+                    tz = r * Math.cos(phi);
+                    tColor.set(0xffd700).offsetHSL(0, 0, 0.2);
+                } else { 
+                    const percent = (i - count * 0.02) / (count * 0.98);
+                    const angle = percent * Math.PI * 50;
+                    const radius = 12 * (1 - Math.pow(percent, 0.8));
+                    const y = -10 + (percent * 24);
+                    tx = radius * Math.cos(angle) + (Math.random()-0.5);
+                    ty = y + (Math.random()-0.5);
+                    tz = radius * Math.sin(angle) + (Math.random()-0.5);
+                    if (Math.random() > 0.9) tColor.copy(Math.random()>0.5?colorRed:colorGold);
+                    else tColor.copy(colorGreen).multiplyScalar(0.5+Math.random()*0.5);
+                }
+                posTree.push(tx, ty, tz);
+                colorTree.push(tColor.r, tColor.g, tColor.b);
+
+                // 2. Candy Cane
+                let cx, cy, cz;
+                let cColor = new THREE.Color();
+                const tubeRadius = 2.5;
+                const straightHeight = 16;
+                const curveRadius = 4.5;
+                const isCurve = Math.random() > 0.7;
+                if (!isCurve) {
+                    const h = (Math.random() - 0.5) * straightHeight; 
+                    cy = h - 2; 
+                    const ang = Math.random() * Math.PI * 2;
+                    const r = tubeRadius * Math.sqrt(Math.random()); 
+                    cx = r * Math.cos(ang) + curveRadius; 
+                    cz = r * Math.sin(ang);
+                    const stripe = Math.sin(cy * 0.8 + ang);
+                    cColor.copy(stripe > 0 ? colorRed : colorWhite);
+                } else {
+                    const arcAngle = Math.random() * Math.PI; 
+                    const torusCenterY = 6;
+                    const ringAngle = Math.random() * Math.PI * 2;
+                    const r = tubeRadius * Math.sqrt(Math.random());
+                    const ringCenterX = curveRadius * Math.cos(arcAngle);
+                    const ringCenterY = torusCenterY + curveRadius * Math.sin(arcAngle);
+                    cx = ringCenterX + r * Math.cos(ringAngle) * Math.cos(arcAngle);
+                    cy = ringCenterY + r * Math.cos(ringAngle) * Math.sin(arcAngle);
+                    cz = r * Math.sin(ringAngle);
+                    const stripe = Math.sin(arcAngle * 4.0 + ringAngle);
+                    cColor.copy(stripe > 0 ? colorRed : colorWhite);
+                }
+                posCandyCane.push(cx, cy, cz);
+                colorCandyCane.push(cColor.r, cColor.g, cColor.b);
+
+                // 3. Snowflake
+                let sx, sy, sz;
+                let sColor = new THREE.Color();
+                const armId = i % 6;
+                const armBaseAngle = (armId / 6) * Math.PI * 2;
+                const rnd = Math.random();
+                let localX, localY;
+                const flakeRadius = 13;
+                if (rnd < 0.6) {
+                    localX = Math.random() * flakeRadius;
+                    localY = (Math.random() - 0.5) * (0.8 - localX/flakeRadius*0.5); 
+                } else {
+                    const branchDist = (0.3 + Math.random() * 0.6) * flakeRadius; 
+                    const branchLen = (flakeRadius - branchDist) * 0.7; 
+                    const branchSide = Math.random() > 0.5 ? 1 : -1;
+                    const branchAngle = Math.PI / 3; 
+                    const t = Math.random(); 
+                    const ox = branchDist;
+                    const oy = 0;
+                    const bx = Math.cos(branchAngle) * branchLen;
+                    const by = Math.sin(branchAngle) * branchLen * branchSide;
+                    localX = ox + bx * t;
+                    localY = oy + by * t;
+                    localX += (Math.random()-0.5) * 0.3;
+                    localY += (Math.random()-0.5) * 0.3;
+                }
+                if (Math.random() < 0.1) {
+                    const r = Math.random() * 2.5;
+                    const ang = Math.random() * Math.PI * 2;
+                    localX = r * Math.cos(ang);
+                    localY = r * Math.sin(ang);
+                }
+                sx = localX * Math.cos(armBaseAngle) - localY * Math.sin(armBaseAngle);
+                sy = localX * Math.sin(armBaseAngle) + localY * Math.cos(armBaseAngle);
+                sz = (Math.random() - 0.5) * 0.5;
+                const distFromCenter = Math.sqrt(sx*sx + sy*sy);
+                sColor.copy(colorWhite).lerp(colorBlue, distFromCenter / flakeRadius);
+                posSnowflake.push(sx, sy, sz);
+                colorSnowflake.push(sColor.r, sColor.g, sColor.b);
+
+                // 4. Gift Box
+                let gx, gy, gz;
+                let gColor = new THREE.Color();
+                const boxSize = 14; 
+                const face = Math.floor(Math.random() * 6);
+                const u = (Math.random() - 0.5) * boxSize;
+                const v = (Math.random() - 0.5) * boxSize;
+                const offset = boxSize / 2;
+                if (face === 0) { gx = offset; gy = u; gz = v; } 
+                else if (face === 1) { gx = -offset; gy = u; gz = v; } 
+                else if (face === 2) { gx = u; gy = offset; gz = v; } 
+                else if (face === 3) { gx = u; gy = -offset; gz = v; } 
+                else if (face === 4) { gx = u; gy = v; gz = offset; } 
+                else { gx = u; gy = v; gz = -offset; } 
+                const ribbonWidth = 2.0;
+                let isRibbon = false;
+                if (face === 0 || face === 1) { 
+                     if (Math.abs(gy) < ribbonWidth || Math.abs(gz) < ribbonWidth) isRibbon = true;
+                }
+                else if (face === 2 || face === 3) { 
+                     if (Math.abs(gx) < ribbonWidth || Math.abs(gz) < ribbonWidth) isRibbon = true;
+                }
+                else { 
+                     if (Math.abs(gx) < ribbonWidth || Math.abs(gy) < ribbonWidth) isRibbon = true;
+                }
+                if (isRibbon) gColor.copy(colorGold).offsetHSL(0,0,0.2);
+                else gColor.copy(colorBoxRed).multiplyScalar(0.8 + Math.random()*0.2);
+                posGiftBox.push(gx, gy, gz);
+                colorGiftBox.push(gColor.r, gColor.g, gColor.b);
+
+                const rDir = new THREE.Vector3(Math.random()-0.5, Math.random()-0.5, Math.random()-0.5).normalize();
+                randomDir.push(rDir.x, rDir.y, rDir.z);
+                sizes.push(Math.random() * 0.5 + 0.5);
+            }
+
+            geometry.setAttribute('position', new THREE.Float32BufferAttribute(posTree, 3)); 
+            geometry.setAttribute('posTree', new THREE.Float32BufferAttribute(posTree, 3));
+            geometry.setAttribute('posCandyCane', new THREE.Float32BufferAttribute(posCandyCane, 3));
+            geometry.setAttribute('posSnowflake', new THREE.Float32BufferAttribute(posSnowflake, 3));
+            geometry.setAttribute('posGiftBox', new THREE.Float32BufferAttribute(posGiftBox, 3));
+            geometry.setAttribute('colorTree', new THREE.Float32BufferAttribute(colorTree, 3));
+            geometry.setAttribute('colorCandyCane', new THREE.Float32BufferAttribute(colorCandyCane, 3));
+            geometry.setAttribute('colorSnowflake', new THREE.Float32BufferAttribute(colorSnowflake, 3));
+            geometry.setAttribute('colorGiftBox', new THREE.Float32BufferAttribute(colorGiftBox, 3));
+            geometry.setAttribute('randomDir', new THREE.Float32BufferAttribute(randomDir, 3));
+            geometry.setAttribute('size', new THREE.Float32BufferAttribute(sizes, 1));
+
+            material = new THREE.ShaderMaterial({
+                uniforms: {
+                    uTime: { value: 0 },
+                    uExpansion: { value: 0 },
+                    uShapeMix: { value: 0 },
+                    uPixelRatio: { value: Math.min(window.devicePixelRatio, 2) }
+                },
+                vertexShader: vertexShader,
+                fragmentShader: fragmentShader,
+                transparent: true,
+                depthWrite: false,
+                blending: THREE.AdditiveBlending
+            });
+
+            particleSystem = new THREE.Points(geometry, material);
+            particleSystem.frustumCulled = false;
+            scene.add(particleSystem);
+        }
+
+        function changeShape(shapeName) {
+            let targetMix = 0;
+            if (shapeName === 'CandyCane') targetMix = 1;
+            if (shapeName === 'Snowflake') targetMix = 2;
+            if (shapeName === 'GiftBox') targetMix = 3;
+            
+            gsap.killTweensOf(material.uniforms.uShapeMix);
+            gsap.to(material.uniforms.uShapeMix, {
+                value: targetMix,
+                duration: 1.5,
+                ease: "power2.inOut"
+            });
+        }
+
+        function updateInteraction() {
+            let targetExp = 0;
+            if (CONFIG.autoRotate) {
+                particleSystem.rotation.y += 0.005;
+            } else {
+                if (isCameraActive) {
+                    targetExp = handExpansion;
+                    if (handRotationTarget < 0.4) particleSystem.rotation.y -= 0.02;
+                    if (handRotationTarget > 0.6) particleSystem.rotation.y += 0.02;
+                    isMouseExploded = false;
+                } else {
+                    targetExp = isMouseExploded ? 1.0 : 0.0;
+                }
+            }
+            
+            gsap.to(material.uniforms.uExpansion, { value: targetExp, duration: 0.5, overwrite: true });
+
+            if (material.uniforms.uExpansion.value > 0.8 && !isTextVisible) {
+                showGreeting();
+            } else if (material.uniforms.uExpansion.value < 0.5 && isTextVisible) {
+                hideGreeting();
+            }
+        }
+
+        function showGreeting() {
+            isTextVisible = true;
+            const overlay = document.getElementById('greeting-text');
+            overlay.innerText = WISHES[currentWishIndex];
+            overlay.style.opacity = 1;
+            overlay.style.transform = "scale(1) translateY(0px)";
+            currentWishIndex = (currentWishIndex + 1) % WISHES.length;
+        }
+
+        function hideGreeting() {
+            isTextVisible = false;
+            const overlay = document.getElementById('greeting-text');
+            overlay.style.opacity = 0;
+            overlay.style.transform = "scale(0.9) translateY(20px)";
+        }
+
+        function animate() {
+            requestAnimationFrame(animate);
+            const time = performance.now() * 0.001;
+            if (material) material.uniforms.uTime.value = time;
+            if (controls) controls.update();
+            updateInteraction();
+            if (composer) composer.render();
+        }
+
+        function onWindowResize() {
+            camera.aspect = window.innerWidth / window.innerHeight;
+            camera.updateProjectionMatrix();
+            renderer.setSize(window.innerWidth, window.innerHeight);
+            composer.setSize(window.innerWidth, window.innerHeight);
+            if (material) material.uniforms.uPixelRatio.value = Math.min(window.devicePixelRatio, 2);
+        }
+
+        async function setupMediaPipe() {
+            const videoElement = document.getElementById('camera-preview');
+            if (typeof window.Hands === 'undefined') {
+                setTimeout(setupMediaPipe, 500);
+                return;
+            }
+            hands = new window.Hands({locateFile: (file) => {
+                return `https://cdn.jsdelivr.net/npm/@mediapipe/hands/${file}`;
+            }});
+            hands.setOptions({
+                maxNumHands: 1,
+                modelComplexity: 1,
+                minDetectionConfidence: 0.5,
+                minTrackingConfidence: 0.5
+            });
+            hands.onResults(onHandResults);
+            cameraUtils = new Camera(videoElement, {
+                onFrame: async () => {
+                    await hands.send({image: videoElement});
+                },
+                width: 320,
+                height: 240
+            });
+        }
+
+        function toggleCamera() {
+            isCameraActive = !isCameraActive;
+            const wrapper = document.getElementById('camera-wrapper');
+            const hint = document.getElementById('click-hint');
+            
+            if (isCameraActive) {
+                wrapper.style.display = 'block';
+                cameraUtils.start();
+                CONFIG.autoRotate = false; 
+                hint.style.display = 'none'; 
+                document.getElementById('btn-rotate').classList.remove('active');
+            } else {
+                wrapper.style.display = 'none';
+                cameraUtils.stop();
+                handExpansion = 0; 
+                hint.style.display = 'block';
+                hint.innerText = "Double Click to Open Gift / Drag to Rotate";
+            }
+        }
+
+        function onHandResults(results) {
+            if (results.multiHandLandmarks && results.multiHandLandmarks.length > 0) {
+                const landmarks = results.multiHandLandmarks[0];
+                const thumb = landmarks[4];
+                const index = landmarks[8];
+                const wrist = landmarks[0];
+                const middleMcp = landmarks[9];
+                const dist = Math.hypot(thumb.x - index.x, thumb.y - index.y);
+                const refDist = Math.hypot(wrist.x - middleMcp.x, wrist.y - middleMcp.y);
+                let pinch = dist / refDist;
+                handExpansion = Math.min(Math.max((pinch - 0.3) / 0.7, 0), 1);
+                handRotationTarget = landmarks[9].x; 
+            } else {
+                handExpansion = 0;
+            }
+        }
+
+        init();
+    </script>
+</body>
+</html>
