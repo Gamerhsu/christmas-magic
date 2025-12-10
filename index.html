@@ -15,18 +15,18 @@
             background-color: #02040a;
             font-family: "SF Pro Display", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
             cursor: default;
+            /* 禁止手機長按選取 */
+            user-select: none; 
+            -webkit-user-select: none;
         }
 
         body {
-            /* 模擬聖誕夜的深邃背景：午夜藍底色 + 遠處的溫暖燈光光暈 */
             background: 
-                radial-gradient(circle at 15% 50%, rgba(220, 20, 60, 0.15), transparent 25%), /* 左側紅光 */
-                radial-gradient(circle at 85% 30%, rgba(255, 215, 0, 0.1), transparent 25%), /* 右側金光 */
-                radial-gradient(circle at 50% 50%, rgba(10, 20, 40, 0.4), #000000 90%), /* 中央暗角 */
-                linear-gradient(to bottom, #0f172a, #000000); /* 整體深藍漸層 */
+                radial-gradient(circle at 15% 50%, rgba(220, 20, 60, 0.15), transparent 25%),
+                radial-gradient(circle at 85% 30%, rgba(255, 215, 0, 0.1), transparent 25%),
+                radial-gradient(circle at 50% 50%, rgba(10, 20, 40, 0.4), #000000 90%),
+                linear-gradient(to bottom, #0f172a, #000000);
         }
-
-        body:active { cursor: grabbing; }
 
         #canvas-container { 
             width: 100%; height: 100%; 
@@ -34,153 +34,162 @@
             z-index: 1;
         }
         
-        /* 2. Apple VisionOS 風格 UI (極致磨砂質感) */
+        /* 2. Liquid Glass 底部懸浮面板 (Compact Bottom Bar) */
         #glass-panel {
             position: absolute;
-            top: 20px;
-            right: 20px;
-            width: 280px;
-            padding: 24px;
+            bottom: 30px; /* 改為底部 */
+            left: 50%;
+            transform: translateX(-50%); /* 水平居中 */
+            width: auto;
+            max-width: 95vw; /* 手機版不超過螢幕 */
+            padding: 12px 20px; /* 稍微加寬一點 padding */
             z-index: 10;
             
             /* 核心玻璃效果 */
-            background: rgba(40, 40, 40, 0.3);
+            background: rgba(40, 40, 40, 0.4);
             backdrop-filter: blur(25px) saturate(180%);
             -webkit-backdrop-filter: blur(25px) saturate(180%);
             
-            /* 邊框光暈 */
             border: 1px solid rgba(255, 255, 255, 0.15);
-            border-radius: 32px;
+            border-radius: 24px; /* 膠囊狀圓角 */
+            box-shadow: 0 10px 40px rgba(0, 0, 0, 0.5);
             
-            /* 柔和陰影 */
-            box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.3);
-            
+            /* 橫向排列 */
             display: flex;
-            flex-direction: column;
-            gap: 20px;
-            transition: opacity 0.3s;
-        }
-
-        .panel-title {
-            color: rgba(255, 255, 255, 0.6);
-            font-size: 11px;
-            font-weight: 700;
-            letter-spacing: 2px;
-            text-transform: uppercase;
-            margin-bottom: 8px;
-        }
-
-        /* 3. 液態氣泡按鈕 */
-        .glass-btn-group {
-            display: flex;
+            flex-direction: row;
+            align-items: center;
             gap: 12px;
-            flex-wrap: wrap;
+            
+            transition: all 0.3s ease;
         }
 
+        /* 3. 分隔線 (用於區分形狀區與功能區) */
+        .separator {
+            width: 1px;
+            height: 32px;
+            background: rgba(255,255,255,0.1);
+            margin: 0 2px;
+        }
+
+        /* 4. 液態按鈕 (更緊湊) */
         .glass-btn {
-            flex: 1;
-            min-width: 60px;
-            height: 48px;
+            min-width: 44px; /* 縮小按鈕寬度 */
+            height: 44px;
             border: none;
             outline: none;
             cursor: pointer;
             position: relative;
-            border-radius: 16px;
+            border-radius: 14px;
             
-            /* 氣泡材質 */
             background: linear-gradient(145deg, rgba(255,255,255,0.1), rgba(255,255,255,0.02));
-            box-shadow: 
-                inset 1px 1px 0px rgba(255, 255, 255, 0.2), 
-                inset -1px -1px 0px rgba(0, 0, 0, 0.1), 
-                0 4px 10px rgba(0,0,0,0.3);
-                
+            box-shadow: inset 1px 1px 0px rgba(255, 255, 255, 0.2), 0 4px 10px rgba(0,0,0,0.2);
+            
             color: rgba(255, 255, 255, 0.9);
-            font-size: 13px;
+            font-size: 18px; /* Emoji 放大 */
             font-weight: 500;
             transition: all 0.2s cubic-bezier(0.25, 0.8, 0.25, 1);
             
             display: flex;
             align-items: center;
             justify-content: center;
-            gap: 6px;
         }
 
-        .glass-btn:hover {
-            transform: translateY(-2px);
-            background: linear-gradient(145deg, rgba(255,255,255,0.15), rgba(255,255,255,0.05));
-            box-shadow: 
-                inset 1px 1px 0px rgba(255, 255, 255, 0.4),
-                0 8px 20px rgba(0,0,0,0.4);
+        /* 文字按鈕樣式 */
+        .glass-btn.text-btn {
+            font-size: 11px;
+            padding: 0 12px;
+            font-weight: 600;
+            letter-spacing: 0.5px;
+            min-width: auto;
         }
 
         .glass-btn:active {
-            transform: translateY(1px);
-            box-shadow: 
-                inset 2px 2px 5px rgba(0,0,0,0.2), 
-                inset -1px -1px 0px rgba(255,255,255,0.1);
+            transform: scale(0.95);
         }
 
         .glass-btn.active {
-            background: rgba(255, 255, 255, 0.15);
-            border: 1px solid rgba(255, 255, 255, 0.4);
-            box-shadow: 0 0 20px rgba(255, 255, 255, 0.15);
+            background: rgba(255, 255, 255, 0.2);
+            border: 1px solid rgba(255, 255, 255, 0.5);
+            box-shadow: 0 0 15px rgba(255, 255, 255, 0.2);
             color: #fff;
-            text-shadow: 0 0 8px rgba(255,255,255,0.6);
         }
 
-        /* 4. 液態滑桿 */
-        .slider-container {
-            width: 100%;
-        }
-        
-        .slider-label {
+        /* 5. 迷你滑桿樣式 */
+        .slider-group {
             display: flex;
-            justify-content: space-between;
-            color: rgba(255,255,255,0.5);
-            font-size: 11px;
-            font-weight: 600;
-            margin-bottom: 10px;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            gap: 2px;
+            margin-left: 4px;
         }
 
+        .slider-icon {
+            font-size: 10px;
+            color: rgba(255,255,255,0.6);
+        }
+
+        /* 覆蓋 input range 樣式以適應玻璃風格 */
         input[type=range] {
             -webkit-appearance: none;
-            width: 100%;
+            width: 70px; /* 短一點 */
+            height: 24px; /* 增加觸控區域 */
             background: transparent;
+            cursor: pointer;
         }
 
         input[type=range]::-webkit-slider-runnable-track {
             width: 100%;
-            height: 6px;
-            cursor: pointer;
-            background: rgba(0, 0, 0, 0.4);
-            border-radius: 10px;
-            box-shadow: inset 0 1px 3px rgba(0,0,0,0.5);
-            border-bottom: 1px solid rgba(255,255,255,0.05);
+            height: 4px;
+            background: rgba(255, 255, 255, 0.2);
+            border-radius: 2px;
+            border: none;
         }
 
         input[type=range]::-webkit-slider-thumb {
             -webkit-appearance: none;
-            height: 22px;
-            width: 22px;
+            height: 14px;
+            width: 14px;
             border-radius: 50%;
-            background: #e0e0e0;
-            cursor: pointer;
-            margin-top: -8px;
-            box-shadow: 
-                0 4px 10px rgba(0,0,0,0.5),
-                inset 0 2px 5px rgba(255,255,255,1);
-            background: radial-gradient(circle at 30% 30%, #ffffff, #888888);
-            transition: transform 0.1s;
-        }
-        
-        input[type=range]::-webkit-slider-thumb:hover {
-            transform: scale(1.1);
+            background: #fff;
+            margin-top: -5px; /* center on track */
+            box-shadow: 0 2px 5px rgba(0,0,0,0.3);
+            border: 1px solid rgba(0,0,0,0.1);
         }
 
-        /* 5. 其他 UI */
+        /* 6. 手機響應式調整 */
+        @media (max-width: 600px) {
+            #glass-panel {
+                bottom: 20px;
+                padding: 10px 14px;
+                gap: 8px;
+                flex-wrap: wrap; /* 如果螢幕太小自動換行 */
+                justify-content: center;
+                width: 90%;
+            }
+            
+            .glass-btn {
+                min-width: 40px;
+                height: 40px;
+                font-size: 16px;
+            }
+
+            .separator {
+                height: 24px; /* 手機上短一點 */
+                margin: 0 2px;
+            }
+            
+            /* 手機上滑桿稍微寬一點，方便手指 */
+            input[type=range] {
+                width: 60px;
+            }
+        }
+
+        /* 7. 其他 UI */
         #greeting-overlay {
             position: absolute;
-            top: 50%; left: 50%;
+            top: 40%; /* 稍微往上移，避開底部UI */
+            left: 50%;
             transform: translate(-50%, -50%);
             text-align: center;
             pointer-events: none;
@@ -190,7 +199,7 @@
         
         #greeting-text {
             font-family: 'Georgia', serif;
-            font-size: 5rem;
+            font-size: 4rem; /* 手機上字體稍微縮小 */
             font-weight: 700;
             color: #fff;
             text-shadow: 0 0 30px rgba(255, 215, 0, 0.5), 0 0 60px rgba(0, 0, 0, 0.8);
@@ -199,34 +208,19 @@
             transform: scale(0.9) translateY(20px);
         }
 
-        #click-hint {
-            position: absolute;
-            bottom: 40px;
-            left: 50%;
-            transform: translateX(-50%);
-            text-align: center;
-            color: rgba(255,255,255,0.6);
-            font-size: 13px;
-            font-weight: 500;
-            letter-spacing: 1px;
-            pointer-events: none;
-            z-index: 5;
-            animation: float 3s ease-in-out infinite;
+        @media (max-width: 600px) {
+            #greeting-text { font-size: 2.5rem; }
         }
 
-        @keyframes float { 
-            0%, 100% { transform: translateX(-50%) translateY(0); opacity: 0.6; } 
-            50% { transform: translateX(-50%) translateY(-5px); opacity: 0.9; } 
-        }
-
+        /* 攝像頭預覽 (縮小並移至左上角，避免擋到底部UI) */
         #camera-wrapper {
             position: absolute;
-            bottom: 20px;
+            top: 20px;
             left: 20px;
-            width: 160px;
-            height: 120px;
+            width: 120px;
+            height: 90px;
             z-index: 10;
-            border-radius: 20px;
+            border-radius: 16px;
             overflow: hidden;
             display: none;
             border: 1px solid rgba(255,255,255,0.3);
@@ -235,13 +229,13 @@
         }
         
         #camera-preview {
-            width: 100%;
-            height: 100%;
+            width: 100%; height: 100%;
             object-fit: cover;
             transform: scaleX(-1);
             opacity: 0.8;
         }
 
+        /* Loading */
         #loading {
             position: absolute;
             top: 50%; left: 50%;
@@ -251,11 +245,10 @@
             z-index: 20;
             background: rgba(20, 20, 20, 0.6);
             backdrop-filter: blur(20px);
-            padding: 30px 50px;
+            padding: 20px 40px;
             border-radius: 20px;
             border: 1px solid rgba(255,255,255,0.1);
             text-align: center;
-            box-shadow: 0 20px 50px rgba(0,0,0,0.5);
         }
     </style>
     
@@ -274,35 +267,34 @@
     <div id="loading">Creating Magic...</div>
     <div id="canvas-container"></div>
     
-    <!-- Liquid Glass UI Panel -->
+    <!-- Compact Bottom Glass Panel -->
     <div id="glass-panel">
-        <div>
-            <div class="panel-title">SHAPE</div>
-            <div class="glass-btn-group">
-                <button class="glass-btn active" onclick="setShape('Tree', this)">🌲</button>
-                <button class="glass-btn" onclick="setShape('CandyCane', this)">🍬</button>
-                <button class="glass-btn" onclick="setShape('Snowflake', this)">❄️</button>
-                <button class="glass-btn" onclick="setShape('GiftBox', this)">🎁</button>
-            </div>
-        </div>
+        <!-- Shapes -->
+        <button class="glass-btn active" onclick="setShape('Tree', this)">🌲</button>
+        <button class="glass-btn" onclick="setShape('CandyCane', this)">🍬</button>
+        <button class="glass-btn" onclick="setShape('Snowflake', this)">❄️</button>
+        <button class="glass-btn" onclick="setShape('GiftBox', this)">🎁</button>
+        
+        <div class="separator"></div>
 
-        <div>
-            <div class="panel-title">INTERACTION</div>
-            <div class="glass-btn-group">
-                <button id="btn-camera" class="glass-btn" onclick="toggleCameraUI()">
-                    <span>📷 Camera</span>
-                </button>
-                <button id="btn-rotate" class="glass-btn" onclick="toggleAutoRotateUI()">
-                    <span>🔄 Rotate</span>
-                </button>
-            </div>
-        </div>
+        <!-- Actions -->
+        <button id="btn-explode" class="glass-btn text-btn" onclick="toggleExplosionUI()">
+            💥 Open
+        </button>
 
-        <div class="slider-container">
-            <div class="slider-label">
-                <span>BLOOM INTENSITY</span>
-                <span id="bloom-val">1.2</span>
-            </div>
+        <button id="btn-rotate" class="glass-btn text-btn" onclick="toggleAutoRotateUI()">
+            🔄 Rotate
+        </button>
+
+        <button id="btn-camera" class="glass-btn text-btn" onclick="toggleCameraUI()">
+            📷 Cam
+        </button>
+
+        <div class="separator"></div>
+
+        <!-- Brightness Slider -->
+        <div class="slider-group">
+            <div class="slider-icon">✨</div>
             <input type="range" min="0" max="3" step="0.1" value="1.2" oninput="updateBloom(this.value)">
         </div>
     </div>
@@ -310,8 +302,6 @@
     <div id="greeting-overlay">
         <div id="greeting-text">Merry Christmas</div>
     </div>
-
-    <div id="click-hint">Double Click to Open Gift / Drag to Rotate</div>
 
     <div id="camera-wrapper">
         <video id="camera-preview" playsinline></video>
@@ -361,7 +351,9 @@
         window.setShape = (shape, btn) => {
             CONFIG.shape = shape;
             changeShape(shape);
-            document.querySelectorAll('.glass-btn-group:first-of-type .glass-btn').forEach(b => b.classList.remove('active'));
+            // 只移除形狀按鈕的 active
+            const siblings = btn.parentNode.querySelectorAll('button:not(.text-btn)');
+            siblings.forEach(b => b.classList.remove('active'));
             btn.classList.add('active');
         };
 
@@ -379,8 +371,21 @@
             else btn.classList.remove('active');
         };
 
+        // 新增：手動切換爆開狀態
+        window.toggleExplosionUI = () => {
+            if (isCameraActive) return; // 攝像頭模式下禁用
+            isMouseExploded = !isMouseExploded;
+            const btn = document.getElementById('btn-explode');
+            if (isMouseExploded) {
+                btn.classList.add('active');
+                btn.innerText = "✖ Close";
+            } else {
+                btn.classList.remove('active');
+                btn.innerText = "💥 Open";
+            }
+        };
+
         window.updateBloom = (val) => {
-            document.getElementById('bloom-val').innerText = val;
             if(composer) composer.passes[1].strength = parseFloat(val);
         };
 
@@ -451,27 +456,23 @@
             const container = document.getElementById('canvas-container');
             
             scene = new THREE.Scene();
-            // 設置霧氣以融合深色背景
             scene.fog = new THREE.FogExp2(0x0a0c14, 0.02);
 
             camera = new THREE.PerspectiveCamera(60, window.innerWidth / window.innerHeight, 0.1, 1000);
             camera.position.set(0, 0, 40);
 
-            // Renderer
             renderer = new THREE.WebGLRenderer({ 
                 antialias: false, 
                 powerPreference: "high-performance",
-                alpha: true // 確保背景透明
+                alpha: true 
             });
             renderer.setSize(window.innerWidth, window.innerHeight);
             renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
-            renderer.setClearColor(0x000000, 0); // 清除顏色設為透明
+            renderer.setClearColor(0x000000, 0); 
             container.appendChild(renderer.domElement);
 
             // Post Processing
             const renderScene = new RenderPass(scene, camera);
-            
-            // Bloom
             const bloomPass = new UnrealBloomPass(new THREE.Vector2(window.innerWidth, window.innerHeight), 1.5, 0.4, 0.85);
             bloomPass.threshold = CONFIG.bloomThreshold;
             bloomPass.strength = CONFIG.bloomStrength;
@@ -497,18 +498,11 @@
         }
 
         function setupEvents() {
+            // Keep double click for desktop users
             window.addEventListener('dblclick', (event) => {
                 if (event.target.closest('#glass-panel')) return;
                 if (!isCameraActive && !CONFIG.autoRotate) {
-                    isMouseExploded = !isMouseExploded;
-                    const hint = document.getElementById('click-hint');
-                    if (isMouseExploded) {
-                        hint.style.opacity = 0.5;
-                        hint.innerText = "Double Click to Close";
-                    } else {
-                        hint.style.opacity = 1;
-                        hint.innerText = "Double Click to Open Gift / Drag to Rotate";
-                    }
+                    toggleExplosionUI(); // Use same logic function
                 }
             });
         }
@@ -797,20 +791,16 @@
         function toggleCamera() {
             isCameraActive = !isCameraActive;
             const wrapper = document.getElementById('camera-wrapper');
-            const hint = document.getElementById('click-hint');
             
             if (isCameraActive) {
                 wrapper.style.display = 'block';
                 cameraUtils.start();
                 CONFIG.autoRotate = false; 
-                hint.style.display = 'none'; 
                 document.getElementById('btn-rotate').classList.remove('active');
             } else {
                 wrapper.style.display = 'none';
                 cameraUtils.stop();
                 handExpansion = 0; 
-                hint.style.display = 'block';
-                hint.innerText = "Double Click to Open Gift / Drag to Rotate";
             }
         }
 
